@@ -58,6 +58,11 @@ else()
   message(STATUS "physics library: no sources in src/ yet")
 endif()
 
+# Rendering lives only in the demo, never in the engine library. Finding
+# raylib here (not up top) keeps that boundary explicit: the physics target
+# above has no idea raylib exists.
+find_package(raylib REQUIRED)
+
 # Demo executable, built from src/main.cpp when it exists.
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
   add_executable(physics_demo src/main.cpp)
@@ -66,6 +71,8 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
   else()
     target_link_libraries(physics_demo PRIVATE phys_flags)
   endif()
+  # raylib's imported target pulls in its own include dirs + link deps.
+  target_link_libraries(physics_demo PRIVATE raylib)
 endif()
 
 # Tests: any *.cpp under tests/ becomes the test runner, wired into CTest.
