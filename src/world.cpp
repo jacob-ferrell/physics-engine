@@ -2,6 +2,7 @@
 #include <raylib.h>
 #include <algorithm>
 #include <optional>
+#include "constants.hpp"
 #include "vec2.hpp"
 
 void World::step(const float& dt) {
@@ -31,8 +32,11 @@ void World::detect() {
             float hitX = c->correction.x != 0;
             float hitY = c->correction.y != 0;
 
-            a.state.velocity.x *= 1.0f - hitX * (1.0f + a.restitution);
-            a.state.velocity.y *= 1.0f - hitY * (1.0f + a.restitution);
+            float eX = a.state.velocity.x > RESTITUTION_THRESHOLD ? a.restitution : 0.0f;
+            float eY = a.state.velocity.y > RESTITUTION_THRESHOLD ? a.restitution : 0.0f;
+
+            a.state.velocity.x *= 1.0f - hitX * (1.0f + eX);
+            a.state.velocity.y *= 1.0f - hitY * (1.0f + eY);
 
 
         }
