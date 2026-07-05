@@ -5,11 +5,6 @@
 #include "constants.hpp"
 #include "shape.hpp"
 #include "body.hpp"
-
-struct BoundsContact {
-    Vec2 correction{0, 0};
-};
-
 class World {
 
     const float height = WINDOW_HEIGHT;
@@ -27,11 +22,14 @@ class World {
         .shape = circle
     };
 
-    std::vector<Body> bodies{circleBody};
+    std::vector<Body> bodies{};
 
 public:
-    World() = default;
-    explicit World(Vec2 g) : gravity(g) {};
+    World() : World(GRAVITY) {};
+    explicit World(Vec2 g) : gravity(g) {
+        bodies.push_back(makeCircle(20, 100, 300));
+        bodies.push_back(makeCircle(20, 400, 500));
+    };
     void step(const float& dt);
     void draw();
 
@@ -39,7 +37,7 @@ private:
     void integrate(const float& dt, MotionState &state);
     void integrate(const float& dt);
     void detect();
-    std::optional<BoundsContact> boundsContact(const Body& body);
+    std::optional<Vec2> boundsContact(const Body& body);
     bool bodiesOverlap(const Body& a, const Body& b);
 };
 
