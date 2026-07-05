@@ -1,12 +1,85 @@
 #include "world.hpp"
 #include <raylib.h>
-#include "shape.hpp"
+#include <algorithm>
+#include <optional>
+#include "vec2.hpp"
 
-void World::step(float& dt) {
+void World::step(const float& dt) {
+
+    integrate(dt);
+    detect();
+}
+
+void World::integrate(const float& dt, MotionState &state) {
+    Vec2& position = state.position;
+    Vec2& velocity = state.velocity;
+    velocity = velocity + gravity * dt;
+    position += velocity * dt;
+}
+
+void World::integrate(const float& dt) {
     for (auto& body : bodies) {
-        updatePosition(dt, body);
+        integrate(dt, body.state);
     }
 }
+
+void World::detect() {
+    for (auto& a : bodies) {
+
+        if (auto c = boundsContact(a)) {
+            a.state.position += c->correction;
+            float hitX = c->correction.x != 0;
+            float hitY = c->correction.y != 0;
+
+            a.state.velocity.x *= 1.0f - hitX * (1.0f + a.restitution);
+            a.state.velocity.y *= 1.0f - hitY * (1.0f + a.restitution);
+
+
+        }
+
+        for (auto& b : bodies) {
+            if (&a == &b) continue;
+            if (bodiesOverlap(a, b)) {
+
+            }
+        }
+    }
+}
+
+std::optional<BoundsContact> World::boundsContact(const Body& body) {
+    Vec2 pos = body.state.position;
+    Vec2 extents = halfExtents(body);
+
+    Vec2 clamped = {
+        std::clamp(pos.x, extents.x, width - extents.x),
+        std::clamp(pos.y, extents.y, height - extents.y)
+    };
+
+    Vec2 correction = clamped - pos;
+
+    if (correction.x == 0.0f && correction.y == 0.0f) {
+        return std::nullopt;
+    }
+
+    return BoundsContact{correction};
+
+}
+
+bool World::bodiesOverlap(const Body& a, const Body& b) {
+    const auto* cA = std::get_if<Circle>(&a.shape);
+    const auto* cB = std::get_if<Circle>(&b.shape);
+
+    if (cA && cB) {
+        Vec2 d = a.state.position - b.state.position;
+        float dSq = d.x * d.x + d.y * d.y;
+        float radiusSum = cA->radius + cB->radius;
+        return dSq < radiusSum * radiusSum;
+    }
+
+    return false;
+}
+
+
 
 void World::draw() {
     for (const auto& body : bodies) {
