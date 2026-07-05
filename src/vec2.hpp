@@ -9,17 +9,52 @@ inline Vec2 operator+(const Vec2& a, const Vec2& b) {
      return {a.x + b.x, a.y + b.y};
 }
 
+inline void operator+=(Vec2& a, const Vec2& b) {
+    a.x += b.x;
+    a.y += b.y;
+}
+
+inline void operator+=(Vec2& a, const float& f) {
+    a.x += f;
+    a.y += f;
+}
+
 inline Vec2 operator-(const Vec2& a, const Vec2& b) {
      return {a.x - b.x, a.y - b.y};
+}
+
+inline void operator-=(Vec2& a, const Vec2& b) {
+    a.x -= b.x;
+    a.y -= b.y;
+}
+
+inline void operator-=(Vec2& a, const float& f) {
+    a.x -= f;
+    a.y -= f;
+}
+
+inline Vec2 operator*(const Vec2 &a, const Vec2 &b) {
+    return {a.x * b.x, a.y * b.y};
 }
 
 inline Vec2 operator*(const Vec2& a, const float& f) {
     return {a.x * f, a.y * f};
 }
 
-inline void operator+=(Vec2& a, const Vec2& b) {
-    a.x += b.x;
-    a.y += b.y;
+inline Vec2 operator*(const float& f, const Vec2& a) {
+    return {a.x * f, a.y * f};
 }
 
+inline float dotProduct(const Vec2 &a, const Vec2 &b) {
+    return a.x * b.x + a.y * b.y;
+}
 
+inline Vec2 operator/(const Vec2& a, float b) {
+    return Vec2{
+        a.x / b,
+        a.y / b
+    };
+}
+
+    
+Vec2 calcNormal(const Vec2& a, const Vec2& b);

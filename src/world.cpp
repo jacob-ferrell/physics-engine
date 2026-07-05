@@ -2,7 +2,7 @@
 #include <raylib.h>
 #include <algorithm>
 #include <optional>
-#include "constants.hpp"
+#include "body.hpp"
 #include "vec2.hpp"
 
 void World::step(const float& dt) {
@@ -28,29 +28,18 @@ void World::detect() {
     for (auto& a : bodies) {
 
         if (auto c = boundsContact(a)) {
-            a.state.position += c->correction;
-            float hitX = c->correction.x != 0;
-            float hitY = c->correction.y != 0;
-
-            float eX = a.state.velocity.x > RESTITUTION_THRESHOLD ? a.restitution : 0.0f;
-            float eY = a.state.velocity.y > RESTITUTION_THRESHOLD ? a.restitution : 0.0f;
-
-            a.state.velocity.x *= 1.0f - hitX * (1.0f + eX);
-            a.state.velocity.y *= 1.0f - hitY * (1.0f + eY);
-
-
+            bounceBody(*c, a);
         }
 
         for (auto& b : bodies) {
             if (&a == &b) continue;
-            if (bodiesOverlap(a, b)) {
-
-            }
+            handleCollision(a, b);
         }
+
     }
 }
 
-std::optional<BoundsContact> World::boundsContact(const Body& body) {
+std::optional<Vec2> World::boundsContact(const Body& body) {
     Vec2 pos = body.state.position;
     Vec2 extents = halfExtents(body);
 
@@ -65,7 +54,7 @@ std::optional<BoundsContact> World::boundsContact(const Body& body) {
         return std::nullopt;
     }
 
-    return BoundsContact{correction};
+    return correction;
 
 }
 
