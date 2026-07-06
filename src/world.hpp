@@ -1,5 +1,6 @@
 #pragma once
 
+#include <raylib.h>
 #include <optional>
 #include <vector>
 #include "constants.hpp"
@@ -28,7 +29,7 @@ public:
     World() : World(GRAVITY) {};
     explicit World(Vec2 g) : gravity(g) {
         bodies.push_back(makeCircle(20, 100, 300));
-        bodies.push_back(makeCircle(20, 400, 500));
+        bodies.push_back(makeCircle(50, 400, 500));
     };
     void step(const float& dt);
     void draw();

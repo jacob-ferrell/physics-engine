@@ -13,3 +13,4 @@ struct Box {
 
 using Shape = std::variant<Circle, Box>;
 
+float area(const Shape& shape);
