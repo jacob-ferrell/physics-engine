@@ -1,10 +1,44 @@
 #include "body.hpp"
+#include <raylib.h>
+#include "shape.hpp"
 #include "vec2.hpp"
 #include "constants.hpp"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstdlib>
+
+
+void grab(Body& body, const Vec2& mousePosition) {
+
+    if (body.grab) {
+        Vec2 d = mousePosition - body.grab->lastMousePosition;
+        body.state.position += d;
+        body.grab->lastMousePosition = mousePosition;
+    } else {
+        body.grab = Grab{mousePosition};
+    }
+
+    body.state.velocity.x = 0.0f;
+    body.state.velocity.y = 0.0f;
+}
+
+float inverseMass(const Body& body) {
+    float a = area(body.shape);
+    float mass = a * body.density;
+    return (mass > 0.0f) ? 1.0f / mass : 0.0f;
+}
+
+bool positionWithinBody(const Body& body, const Vec2& position) {
+    Vec2 bodyPosition = body.state.position;
+    Vec2 absDistance = abs(bodyPosition - position);
+    Vec2 extents = halfExtents(body);
+    return absDistance.x <= extents.x && absDistance.y <= extents.y; 
+}
+
+bool positionWithinBody(const Body& body, const Vector2& position) {
+    return positionWithinBody(body, Vec2{position.x, position.y});
+}
 
 Vec2 halfExtents(const Body& body) {
     if (const auto* c = std::get_if<Circle>(&body.shape)) {
@@ -64,7 +98,8 @@ void handleCircleCollision(Body& a, Body& b, const float& radiusSum) {
 
     if (velAlongNormal > 0) return; // already moving apart
 
-    float invMassA = 1, invMassB = 1; // placeholders for when mass is introduced
+    float invMassA = inverseMass(a);
+    float invMassB = inverseMass(b); 
 
     float e = std::min(a.restitution, b.restitution);
 
@@ -97,4 +132,8 @@ void handleCollision(Body& a, Body& b) {
 
 }
 
-
+Body makeCircle(float radius, float x, float y, float density) {
+    Body c = makeCircle(radius, x, y);
+    c.density = density;
+    return c;
+}

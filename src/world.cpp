@@ -1,12 +1,12 @@
 #include "world.hpp"
 #include <raylib.h>
 #include <algorithm>
+#include <iostream>
 #include <optional>
 #include "body.hpp"
 #include "vec2.hpp"
 
 void World::step(const float& dt) {
-
     integrate(dt);
     detect();
 }
@@ -14,19 +14,34 @@ void World::step(const float& dt) {
 void World::integrate(const float& dt, MotionState &state) {
     Vec2& position = state.position;
     Vec2& velocity = state.velocity;
-    velocity = velocity + gravity * dt;
+    velocity = velocity + gravity * dt; // apply gravity
     position += velocity * dt;
 }
 
 void World::integrate(const float& dt) {
+    bool mousePressed = IsMouseButtonDown(MOUSE_LEFT_BUTTON);
+    Vector2 mp = GetMousePosition();
+    Vec2 mousePosition = Vec2{mp.x, mp.y};
+
     for (auto& body : bodies) {
-        integrate(dt, body.state);
+
+        if (mousePressed && positionWithinBody(body, mousePosition)) {
+            std::cout << "Clicked in circle!" << std::endl;
+            grab(body, mousePosition);
+        } else {
+            body.grab = std::nullopt;
+            integrate(dt, body.state);
+        }
+
     }
 }
 
 void World::detect() {
+
+
     for (auto& a : bodies) {
 
+    
         if (auto c = boundsContact(a)) {
             bounceBody(*c, a);
         }

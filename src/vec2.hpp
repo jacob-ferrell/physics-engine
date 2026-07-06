@@ -1,5 +1,6 @@
 #pragma once 
 
+#include <cstdlib>
 struct Vec2 {
     float x = 0.0f;
     float y = 0.0f;
@@ -47,6 +48,10 @@ inline Vec2 operator*(const float& f, const Vec2& a) {
 
 inline float dotProduct(const Vec2 &a, const Vec2 &b) {
     return a.x * b.x + a.y * b.y;
+}
+
+inline Vec2 abs(const Vec2& a) {
+    return Vec2{std::abs(a.x), std::abs(a.y)};
 }
 
 inline Vec2 operator/(const Vec2& a, float b) {
