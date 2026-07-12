@@ -1,7 +1,6 @@
 #include "world.hpp"
 #include <raylib.h>
 #include <algorithm>
-#include <iostream>
 #include <optional>
 #include "body.hpp"
 #include "vec2.hpp"
@@ -25,13 +24,21 @@ void World::integrate(const float& dt) {
 
     for (auto& body : bodies) {
 
-        if (mousePressed && positionWithinBody(body, mousePosition)) {
-            std::cout << "Clicked in circle!" << std::endl;
-            grab(body, mousePosition);
+        if (!mousePressed) {
+            selectedBody = std::nullopt;
+        } else if (!selectedBody && positionWithinBody(body, mousePosition)) {
+            grabBody(body, mp);
+            continue;
+        }     
+
+        bool bodyIsSelected = selectedBody && selectedBody->bodyId == body.id;
+
+        if (bodyIsSelected) {
+            dragBody(body, mousePosition, dt);
         } else {
-            body.grab = std::nullopt;
             integrate(dt, body.state);
         }
+
 
     }
 }
@@ -87,7 +94,20 @@ bool World::bodiesOverlap(const Body& a, const Body& b) {
     return false;
 }
 
+void World::grabBody(Body& body, const Vector2& mousePosition) {
+    freeze(body);
+    selectedBody = MouseSelection{
+        body.id, 
+        Vec2{mousePosition.x, mousePosition.y}
+    };
+}
 
+void World::dragBody(Body& body, const Vec2& mousePosition, const float& dt) {
+    Vec2 d = mousePosition - selectedBody->lastMousePosition;
+    body.state.position += d;
+    body.state.velocity = d / dt;
+    selectedBody->lastMousePosition = mousePosition;
+}
 
 void World::draw() {
     for (const auto& body : bodies) {
@@ -102,4 +122,8 @@ void World::draw() {
 
 
     }
+}
+
+void World::addBody(const Body& body) {
+    bodies.push_back(body);
 }
