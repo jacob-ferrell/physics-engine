@@ -8,17 +8,7 @@
 #include <cmath>
 #include <cstdlib>
 
-
-void grab(Body& body, const Vec2& mousePosition) {
-
-    if (body.grab) {
-        Vec2 d = mousePosition - body.grab->lastMousePosition;
-        body.state.position += d;
-        body.grab->lastMousePosition = mousePosition;
-    } else {
-        body.grab = Grab{mousePosition};
-    }
-
+void freeze(Body& body) {
     body.state.velocity.x = 0.0f;
     body.state.velocity.y = 0.0f;
 }
@@ -66,7 +56,8 @@ void bounceBody(Vec2& c, Body& body) {
 }
 
 
-Body makeCircle(float radius, float x, float y) {
+Body makeCircle(const int nextBodyId, const float radius, const float x, const float y) {
+
     Circle c = {
         .radius = radius
     };
@@ -76,6 +67,7 @@ Body makeCircle(float radius, float x, float y) {
     };
 
     Body body = {
+        .id = nextBodyId,
         .state = state,
         .shape = c
     };
@@ -132,8 +124,8 @@ void handleCollision(Body& a, Body& b) {
 
 }
 
-Body makeCircle(float radius, float x, float y, float density) {
-    Body c = makeCircle(radius, x, y);
+Body makeCircle(const int nextBodyId, const float radius, const float x, const float y, const float density) {
+    Body c = makeCircle(nextBodyId, radius, x, y);
     c.density = density;
     return c;
 }
