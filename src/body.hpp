@@ -4,48 +4,47 @@
 #include "vec2.hpp"
 #include "shape.hpp"
 
-struct Grab {
-    Vec2 lastMousePosition;
+class Body {
+    Vec2 position_;
+    Vec2 velocity_ = {0, 0};
+    Shape shape_;
+    int id_;
+    float restitution_ = 0.8f;
+    float density_ = 1.0f;
+
+public:
+    Body(int id, float radius, Vec2 position, float density)
+        :  position_(position), shape_(Circle{radius}), id_(id), density_{density} {}
+
+    Body(int id, float radius, Vec2 position)
+        :  position_(position), shape_(Circle{radius}), id_(id) {}
+    
+
+    const int& id() const { return id_; }
+    const Shape& shape() const { return shape_; }
+    const Vec2& position() const { return position_; }
+
+    Vec2 halfExtents() const; 
+    void integrate(const float& dt, const Vec2& gravity);
+    void bounce(Vec2& c); 
+    void handleCollision(Body& other);
+    bool containsPosition(const Vec2& position) const;
+    bool containsPosition(const Vector2& position) const;
+    void freeze();
+    float inverseMass() const;
+    static Body makeCircle(const int nextBodyId, const float radius, const float x, const float y);
+    static Body makeCircle(const int nextBodyId, const float radius, const float x, const float y, const float density);
+    void handleCircleCollision(Body& b, const float& radiusSum);
+    float area() const; 
+    void drag(const Vec2& distance, const float& dt); 
+    void draw() const;
+    bool overlaps(const Body& b) const;
+
 };
 
-struct BoundsContact {
-    Vec2 correction{0, 0};
-};
 
-struct MotionState {
-    Vec2 position;
-    Vec2 velocity{0, 0};
-};
 
-struct Body {
-    int id;
-    MotionState state;
-    Shape shape;
-    float restitution = 0.8f;
-    float density = 1.0f;
-};
 
-Vec2 halfExtents(const Body& body); 
-
-void integrate(const float& dt, MotionState& state);
-
-void bounceBody(Vec2& c, Body& body); 
-
-Body makeCircle(const int nextBodyId, const float radius, const float x, const float y);
-Body makeCircle(const int nextBodyId, const float radius, const float x, const float y, const float density);
-
-void handleCircleCollision(Body& a, Body& b, const float& radiusSum);
-
-void handleCollision(Body& a, Body& b);
-
-// if given position exists within the body
-bool positionWithinBody(const Body& body, const Vec2& position);
-bool positionWithinBody(const Body& body, const Vector2& position);
-
-// 'Freezes' a body, reduces its velocity to zero 
-void freeze(Body& body);
-
-float inverseMass(const Body& body);
 
 
 
