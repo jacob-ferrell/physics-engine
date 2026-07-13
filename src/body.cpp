@@ -7,10 +7,13 @@
 #include <cassert>
 #include <cmath>
 #include <cstdlib>
+#include <iostream>
+#include "contact.hpp"
 
 void Body::freeze() {
     velocity_.x = 0.0f;
     velocity_.y = 0.0f;
+    angularVelocity_ = 0.0f;
 }
 
 float Body::area() const {
@@ -29,10 +32,23 @@ float Body::area() const {
  
 }
 
-float Body::inverseMass() const {
-    float a = area();
-    float mass = a * density_;
-    return (mass > 0.0f) ? 1.0f / mass : 0.0f;
+float Body::calcInertia() const {
+
+    if (const auto* c = std::get_if<Circle>(&shape_)) {
+        return 0.5f * mass() * c->radius * c->radius;
+    } else if (const auto* box = std::get_if<Box>(&shape_)) {
+        return mass() * ((box->height * box->height) + (box->width * box->width)) / 12;
+    }
+
+    assert(false && "unhandled Shape type");
+
+    return 0.0f;
+
+}
+
+float Body::calcInverseInertia() const {
+    float i = inertia();
+    return i > 0 ? 1 / i : 0.0f;
 }
 
 bool Body::containsPosition(const Vec2& position) const {
@@ -61,6 +77,7 @@ Vec2 Body::halfExtents() const {
 void Body::integrate(const float& dt, const Vec2& gravity) {
     velocity_ = velocity_ + gravity * dt; // apply gravity
     position_ += velocity_ * dt;
+    angle_ = angle_ + angularVelocity_ * dt;
 }
 
 void Body::bounce(Vec2& c) {
@@ -85,36 +102,78 @@ Body Body::makeCircle(const int nextBodyId, const float radius, const float x, c
     };
 }
 
-void Body::handleCircleCollision(Body& b, const float& radiusSum) {
+void Body::handleCircleCollision(Body& b, const Contact& contact) {
+    adjustVelocity(b, contact);
+    correct(b, contact.correction);
+}
 
-    Vec2 direction = b.position_ - position_;
-    float length = std::sqrt((direction.x * direction.x) + (direction.y * direction.y));
+void Body::correct(Body& other, const Vec2& correction) {
+    float inverseMassSum = inverseMass_ + other.inverseMass_;
+    position_ -= correction * (inverseMass_ / inverseMassSum);
+    other.position_ += correction * (other.inverseMass_ / inverseMassSum);
+}
 
-    if (length == 0.0f) return; //avoid dividing by 0
+void Body::adjustVelocity(Body& other, const Contact& contact) {
 
-    Vec2 normal = direction / length;
+    auto normal = contact.normal;
 
-    Vec2 relVelocity = b.velocity_ - velocity_;
+    Vec2 relVelocity = other.velocity_ - velocity_;
+
     float velAlongNormal = dotProduct(relVelocity, normal);
 
     if (velAlongNormal > 0) return; // already moving apart
 
     float invMassA = inverseMass();
-    float invMassB = b.inverseMass(); 
+    float invMassB = other.inverseMass(); 
 
-    float e = std::min(restitution_, b.restitution_);
+    float e = collisionRestitution(other);
 
     float impulseMagnitute = -(1 + e) * velAlongNormal / (invMassA + invMassB);
 
-    velocity_ -= impulseMagnitute * invMassA * normal;
-    b.velocity_ += impulseMagnitute * invMassB * normal;
+    Vec2 J = impulseMagnitute * normal;
 
-    float penetration = radiusSum - length;
+    velocity_ -= J * invMassA;
+    angularVelocity_ -= crossProduct(contact.rA, J) * inverseInertia_;
 
-    Vec2 correction = normal * penetration;
+    other.velocity_ += J * invMassB;
+    other.angularVelocity_ += crossProduct(contact.rB, J) * other.inverseInertia_;
 
-    position_ -= correction * (invMassA / (invMassA + invMassB));
-    b.position_ += correction * (invMassB / (invMassA + invMassB));
+    applyFrictionImpulse(other, contact, impulseMagnitute);
+
+}
+
+void Body::applyFrictionImpulse(Body& other, const Contact& contact, const float& impulseMagnitute) {
+    // relative velocity of the 2 surfaces at the contact point
+    Vec2 relativeVelocity = (other.velocity_ + other.angularVelocity_ * perpendicular(contact.rB))
+        - (velocity_ + angularVelocity_ * perpendicular(contact.rA));
+
+    Vec2 tangent = relativeVelocity - (contact.normal * (dotProduct(relativeVelocity, contact.normal)));
+
+    float tLen = std::sqrt(dotProduct(tangent, tangent));
+
+    // check if there was any meaningful slide, can't use 0 due to floating point 
+    if (tLen <= EPSILON) return;
+
+    tangent /= tLen;
+
+    //impulse needed to stop the sliding
+    float jt = -dotProduct(relativeVelocity, tangent);
+
+    jt /= inverseMass_ + other.inverseMass_
+          + crossProduct(contact.rA, tangent) * crossProduct(contact.rA, tangent) * inverseInertia_
+          + crossProduct(contact.rB, tangent) * crossProduct(contact.rB, tangent) * other.inverseInertia_;
+
+
+    float mu = collisionFriction(other);
+
+    jt = std::clamp(jt, -mu * impulseMagnitute, mu * impulseMagnitute);
+
+    //apply equal and opposite tangential impulses
+    Vec2 Jt = jt * tangent;
+    velocity_          -= Jt * inverseMass_;
+    angularVelocity_   -= crossProduct(contact.rA, Jt) * inverseInertia_;
+    other.velocity_        += Jt * other.inverseMass_;
+    other.angularVelocity_ += crossProduct(contact.rB, Jt) * other.inverseInertia_;
 
 }
 
@@ -123,11 +182,8 @@ void Body::handleCollision(Body& b) {
     const auto* cB = std::get_if<Circle>(&b.shape_);
 
     if (cA && cB) {
-        Vec2 d = position_ - b.position_;
-        float dSq = d.x * d.x + d.y * d.y;
-        float radiusSum = cA->radius + cB->radius;
-        if (dSq < radiusSum * radiusSum) {
-            handleCircleCollision(b, radiusSum);
+        if (auto contact = circleCircle(*this, b, cA->radius, cB->radius)) {
+            handleCircleCollision(b, *contact);
         }
     }
 
@@ -142,6 +198,9 @@ void Body::drag(const Vec2& distance, const float& dt) {
 
     if (const auto* c = std::get_if<Circle>(&shape_)) {
         DrawCircleV({pos.x, pos.y}, c->radius, RAYWHITE);
+        // spin indicator: line from center to rim at angle_
+        Vec2 rim = pos + Vec2{std::cos(angle_), std::sin(angle_)} * c->radius;
+        DrawLineEx({pos.x, pos.y}, {rim.x, rim.y}, 2.0f, RED);
     } else if (const auto* box = std::get_if<Box>(&shape_)) {
         DrawRectangleV({pos.x - box->width / 2, pos.y - box->height / 2}, {box->width, box->height}, RAYWHITE);
     }

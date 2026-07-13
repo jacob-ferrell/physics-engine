@@ -6,6 +6,7 @@
 #include "constants.hpp"
 #include "body.hpp"
 #include "vec2.hpp"
+#include "contact.hpp"
 
 struct MouseSelection {
     int bodyId;
@@ -23,6 +24,8 @@ class World {
     std::vector<Body> bodies{};
 
     std::optional<MouseSelection> selectedBody;
+
+    std::vector<Contact> contacts;
 
 
 public:
