@@ -28,14 +28,13 @@ class World {
 public:
     World() : World(GRAVITY) {};
     explicit World(Vec2 g) : gravity(g) {
-        addBody(makeCircle(nextBodyId++, 20, 100, 300));
-        addBody(makeCircle(nextBodyId++, 50, 400, 500));
+        addBody(Body::makeCircle(nextBodyId++, 20, 100, 300));
+        addBody(Body::makeCircle(nextBodyId++, 50, 400, 500));
     };
     void step(const float& dt);
     void draw();
 
 private:
-    void integrate(const float& dt, MotionState &state);
     void integrate(const float& dt);
     void detect();
     std::optional<Vec2> boundsContact(const Body& body);
